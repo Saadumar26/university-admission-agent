@@ -5,42 +5,41 @@ from crewai import Agent, Task, Crew, LLM
 
 def run_eligibility_agent(applicant_profile, programs):
     """
-    Run the Eligibility Agent.
+    Eligibility Agent:
+    Evaluates whether the student appears eligible.
     """
 
     llm = LLM(
         model="groq/openai/gpt-oss-120b",
-        api_key=os.getenv("GROQ_API_KEY"),
+        api_key=os.environ["GROQ_API_KEY"],
         temperature=0.2,
+        max_tokens=1200,
+        reasoning_effort="low",
     )
 
-    eligibility_agent = Agent(
+    agent = Agent(
         role="University Eligibility Evaluator",
 
         goal=(
-            "Evaluate the student's eligibility for the provided "
-            "university programs."
+            "Evaluate the student's apparent eligibility for "
+            "the provided university programs."
         ),
 
         backstory=(
             "You are an academic eligibility evaluator familiar "
             "with the Pakistani education system. You compare "
-            "student qualifications with the admission requirements "
-            "provided for each program. You do not make assumptions "
-            "when information is missing."
+            "student qualifications against the requirements "
+            "provided for each program."
         ),
 
         llm=llm,
-
         allow_delegation=False,
-
         verbose=False,
     )
 
     task = Task(
         description=f"""
-        Evaluate the student's eligibility for the available
-        university programs.
+        Evaluate the student's eligibility.
 
         STUDENT PROFILE:
         {applicant_profile}
@@ -48,7 +47,7 @@ def run_eligibility_agent(applicant_profile, programs):
         AVAILABLE PROGRAMS:
         {programs}
 
-        For each relevant program, classify the student's status as:
+        For each relevant program, classify the student as:
 
         - Appears Eligible
         - Appears Not Eligible
@@ -56,7 +55,7 @@ def run_eligibility_agent(applicant_profile, programs):
 
         Consider:
 
-        1. Current qualification
+        1. Qualification
         2. Field / major
         3. CGPA
         4. Percentage
@@ -64,29 +63,28 @@ def run_eligibility_agent(applicant_profile, programs):
         6. Entry test
         7. English proficiency
 
-        Important rules:
+        Rules:
 
-        - Use ONLY the provided program requirements.
-        - Do not invent requirements.
-        - Do not assume that missing information satisfies a requirement.
-        - If an important requirement is unknown, use
+        - Use ONLY the provided requirements.
+        - Never invent requirements.
+        - Missing information must not automatically be treated
+          as satisfying a requirement.
+        - If important information is missing, use
           "Cannot Determine".
-        - Do not use GRE or GMAT unless they are explicitly listed
-          in the provided program requirements.
-        - Explain the reason for each result.
-        - Keep the answer simple.
+        - Do not introduce GRE or GMAT unless explicitly listed.
+        - Give a short reason for each result.
         """,
 
-        expected_output="""
-        A program-by-program eligibility assessment containing:
-        program name, eligibility status, and a short explanation.
-        """,
+        expected_output=(
+            "A concise program-by-program eligibility assessment "
+            "with status and explanation."
+        ),
 
-        agent=eligibility_agent,
+        agent=agent,
     )
 
     crew = Crew(
-        agents=[eligibility_agent],
+        agents=[agent],
         tasks=[task],
         verbose=False,
     )
